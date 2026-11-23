@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1f3a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Maritime RWA" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Interactive dry-bulk fleet scaling, bank debt tokenization, and ERC-3643 exit simulator." />
+  <link id="pwa-manifest" rel="manifest" href="" />
+  <link id="apple-touch-icon" rel="apple-touch-icon" href="" />
+  <title>Maritime Capital &amp; Fleet Scaling Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            navy: { 950: '#061120', 900: '#0b1f3a', 800: '#133b6b', 700: '#1d4ed8' },
+            gold: { 400: '#eab308', 500: '#ca8a04' }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+
+    /* Hide horizontal scrollbar on mobile tab strip while preserving touch swipe */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Touch-friendly 22px slider thumbs for smartphone precision */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0284c7;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(11, 31, 58, 0.28);
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0284c7;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(11, 31, 58, 0.28);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans antialiased min-h-screen pb-20">
+  <!-- Mobile-Only Sticky Live KPI Bar -->
+  <div class="lg:hidden sticky top-0 z-40 bg-navy-900/95 backdrop-blur-md text-white border-b border-white/10 shadow-md px-3 py-2.5">
+    <div class="max-w-7xl mx-auto grid grid-cols-3 gap-2 text-center">
+      <div class="bg-white/5 rounded-lg py-1 px-1.5">
+        <div class="text-[9px] font-bold uppercase tracking-wider text-sky-300">Net Profit Pool</div>
+        <div id="mob-kpi-profit" class="text-xs sm:text-sm font-extrabold tabular-nums truncate">$0</div>
+      </div>
+      <div class="bg-white/5 rounded-lg py-1 px-1.5">
+        <div class="text-[9px] font-bold uppercase tracking-wider text-amber-300">Mgr Cash Yield</div>
+        <div id="mob-kpi-mgr" class="text-xs sm:text-sm font-extrabold tabular-nums">0.00%</div>
+      </div>
+      <div class="bg-white/5 rounded-lg py-1 px-1.5">
+        <div class="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Token ROI</div>
+        <div id="mob-kpi-tok" class="text-xs sm:text-sm font-extrabold tabular-nums">0.00%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+    <!-- Executive Header -->
+    <header class="bg-gradient-to-br from-navy-900 via-navy-800 to-sky-900 text-white rounded-2xl p-5 sm:p-8 shadow-md mb-5 border border-slate-800/40">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <p class="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-sky-300 mb-1">
+            Dry-Bulk &amp; Real-World Asset Structuring PWA • Nov 2026
+          </p>
+          <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight leading-tight">
+            Maritime Capital &amp; Fleet Scaling Architecture
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-200 mt-1.5 max-w-3xl">
+            Interactive cash-flow waterfall, institutional bank debt tokenization, ERC-3643 equity &amp; 10-year exit simulator, and market execution roadmap.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <span id="pwa-status-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold text-amber-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            PWA Ready • Offline Enabled
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Primary 4-Tab Navigation (Horizontal Touch Scroll on Mobile) -->
+    <nav class="flex overflow-x-auto no-scrollbar gap-2 mb-5 pb-1" role="tablist" aria-label="Model Sections">
+      <button type="button" data-tab="sim" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer bg-navy-900 text-white shadow-sm">
+        1. Fleet Waterfall &amp; Scaling
+      </button>
+      <button type="button" data-tab="debt" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer bg-white text-slate-600 hover:text-slate-900 border border-slate-200">
+        2. Bank Debt Tokenization
+      </button>
+      <button type="button" data-tab="exit" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer bg-white text-slate-600 hover:text-slate-900 border border-slate-200">
+        3. ERC-3643 &amp; Exit Mechanics
+      </button>
+      <button type="button" data-tab="road" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer bg-white text-slate-600 hover:text-slate-900 border border-slate-200">
+        4. Nov 2026 Benchmarks &amp; Roadmap
+      </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: FLEET WATERFALL & SCALING SIMULATOR                            -->
+    <!-- ===================================================================== -->
+    <section id="tab-sim" class="tab-panel block">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <!-- Left Input Controls -->
+        <aside class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900">Deal &amp; Operating Inputs</h2>
+            <span id="active-preset-label" class="text-[11px] font-semibold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">$20M Supramax</span>
+          </div>
+
+          <!-- Preset Scenarios -->
+          <div class="grid grid-cols-3 gap-2 mb-5">
+            <button type="button" data-preset="supramax" class="preset-btn px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer bg-sky-50 border-sky-500 text-navy-900">
+              $20M Supramax
+            </button>
+            <button type="button" data-preset="ultramax36" class="preset-btn px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300">
+              $36M Ultramax
+            </button>
+            <button type="button" data-preset="ultramax46" class="preset-btn px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300">
+              $46M Prompt
+            </button>
+          </div>
+
+          <!-- Asset & Capital Stack -->
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">Asset &amp; Capital Stack</div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-valuation" class="font-medium text-slate-600">Vessel Market Valuation ($M)</label>
+              <span id="val-valuation" class="font-bold text-navy-900 tabular-nums">$20.0M</span>
+            </div>
+            <input type="range" id="inp-valuation" min="12" max="50" step="0.5" value="20" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-ltv" class="font-medium text-slate-600">Senior Bank Debt LTV (%)</label>
+              <span id="val-ltv" class="font-bold text-navy-900 tabular-nums">60.0%</span>
+            </div>
+            <input type="range" id="inp-ltv" min="30" max="80" step="1" value="60" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-co-invest" class="font-medium text-slate-600">Manager Equity Co-Invest (%)</label>
+              <span id="val-co-invest" class="font-bold text-navy-900 tabular-nums">20.0%</span>
+            </div>
+            <input type="range" id="inp-co-invest" min="5" max="100" step="1" value="20" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-5">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-cash-pool" class="font-medium text-slate-600">Corporate Starting Cash Pool ($M)</label>
+              <span id="val-cash-pool" class="font-bold text-navy-900 tabular-nums">$8.0M</span>
+            </div>
+            <input type="range" id="inp-cash-pool" min="1" max="30" step="0.5" value="8" class="w-full cursor-pointer" />
+          </div>
+
+          <!-- Debt Terms & Cost of Debt -->
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-3.5 border-t border-slate-100 mb-3">
+            Debt Terms &amp; Cost of Debt
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-rate" class="font-medium text-slate-600">Interest Rate (% p.a.)</label>
+              <span id="val-rate" class="font-bold text-navy-900 tabular-nums">6.50%</span>
+            </div>
+            <input type="range" id="inp-rate" min="3.0" max="12.0" step="0.25" value="6.5" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-term" class="font-medium text-slate-600">Loan Term (Years)</label>
+              <span id="val-term" class="font-bold text-navy-900 tabular-nums">10 yrs</span>
+            </div>
+            <input type="range" id="inp-term" min="3" max="15" step="1" value="10" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-5">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-balloon" class="font-medium text-slate-600">Balloon at Maturity (%)</label>
+              <span id="val-balloon" class="font-bold text-navy-900 tabular-nums">62.7%</span>
+            </div>
+            <input type="range" id="inp-balloon" min="0" max="85" step="0.1" value="62.7" class="w-full cursor-pointer" />
+          </div>
+
+          <!-- Charter Revenue, OPEX & CapEx -->
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-3.5 border-t border-slate-100 mb-3">
+            Charter Revenue, OPEX &amp; CapEx
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-charter" class="font-medium text-slate-600">Daily Charter Rate ($/day)</label>
+              <span id="val-charter" class="font-bold text-navy-900 tabular-nums">$16,500</span>
+            </div>
+            <input type="range" id="inp-charter" min="8000" max="35000" step="250" value="16500" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-days" class="font-medium text-slate-600">Operational Days / Year</label>
+              <span id="val-days" class="font-bold text-navy-900 tabular-nums">350 days</span>
+            </div>
+            <input type="range" id="inp-days" min="300" max="365" step="1" value="350" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-opex" class="font-medium text-slate-600">Daily Vessel OPEX ($/day)</label>
+              <span id="val-opex" class="font-bold text-navy-900 tabular-nums">$6,200</span>
+            </div>
+            <input type="range" id="inp-opex" min="4000" max="11000" step="100" value="6200" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-capex" class="font-medium text-slate-600">Drydock / Special Survey CapEx ($k)</label>
+              <span id="val-capex" class="font-bold text-navy-900 tabular-nums">$1,100k</span>
+            </div>
+            <input type="range" id="inp-capex" min="0" max="3000" step="50" value="1100" class="w-full cursor-pointer" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-mgmt-fee" class="font-medium text-slate-600">Annual Management Fee ($k)</label>
+              <span id="val-mgmt-fee" class="font-bold text-navy-900 tabular-nums">$250k</span>
+            </div>
+            <input type="range" id="inp-mgmt-fee" min="0" max="600" step="25" value="250" class="w-full cursor-pointer" />
+          </div>
+        </aside>
+
+        <!-- Right Dynamic Outputs -->
+        <div class="lg:col-span-8 space-y-5 sm:space-y-6">
+          <!-- 4 Core KPI Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Net Profit Pool</span>
+                <span class="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">ANNUAL</span>
+              </div>
+              <div id="kpi-net-profit" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">$0</div>
+              <div id="kpi-gross-rev" class="text-xs text-slate-500 mt-1 tabular-nums">Gross Revenue: $0</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Manager Cash Inflow</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">DOUBLE-DIP</span>
+              </div>
+              <div id="kpi-mgr-inflow" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">$0</div>
+              <div id="kpi-mgr-split" class="text-xs text-slate-500 mt-1 tabular-nums">$0 Fee + $0 Yield</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Manager Cash Yield</span>
+                <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold">CASH-ON-CASH</span>
+              </div>
+              <div id="kpi-mgr-yield" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">0.00%</div>
+              <div id="kpi-mgr-payback" class="text-xs text-slate-500 mt-1 tabular-nums">Payback: —</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Token Investor ROI</span>
+                <span class="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">ERC-3643</span>
+              </div>
+              <div id="kpi-tok-roi" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">0.00%</div>
+              <div id="kpi-tok-payout" class="text-xs text-slate-500 mt-1 tabular-nums">Annual Payout: $0</div>
+            </div>
+          </div>
+
+          <!-- Capital Structure & Cash Pool Sizing -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+            <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900 mb-3">
+              Capital Structure &amp; Cash Pool Sizing
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Senior Loan Principal</div>
+                <div id="cap-loan" class="text-xl font-extrabold text-navy-900 mt-1 tabular-nums">$0</div>
+                <div id="cap-balloon-amt" class="text-xs text-slate-500 mt-0.5 tabular-nums">Balloon: $0</div>
+              </div>
+              <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Deal Equity</div>
+                <div id="cap-equity" class="text-xl font-extrabold text-navy-900 mt-1 tabular-nums">$0</div>
+                <div id="cap-equity-split" class="text-xs text-slate-500 mt-0.5 tabular-nums">Mgr: $0 | Tokens: $0</div>
+              </div>
+              <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Yr-0 Vessels Funded</div>
+                <div id="cap-yr0-ships" class="text-xl font-extrabold text-navy-900 mt-1 tabular-nums">0 ships</div>
+                <div id="cap-cash-left" class="text-xs text-slate-500 mt-0.5 tabular-nums">Pool Left: $0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Annual Vessel Cash-Flow Waterfall Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+            <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900 mb-3">
+              Annual Vessel Cash-Flow Waterfall
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-y border-slate-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <th class="py-2.5 px-3 text-left">Line Item</th>
+                    <th class="py-2.5 px-3 text-right">Annual Amount</th>
+                    <th class="py-2.5 px-3 text-right">Notes / Basis</th>
+                  </tr>
+                </thead>
+                <tbody id="waterfall-body" class="divide-y divide-slate-100 tabular-nums"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 5-Year Fleet Compounding Projection Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+            <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900 mb-3">
+              5-Year Fleet Compounding Projection
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-y border-slate-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <th class="py-2.5 px-3 text-left">Year</th>
+                    <th class="py-2.5 px-3 text-right">Active Ships</th>
+                    <th class="py-2.5 px-3 text-right">Annual Mgr Inflow</th>
+                    <th class="py-2.5 px-3 text-right">Cumulative Cash Pool</th>
+                  </tr>
+                </thead>
+                <tbody id="compounding-body" class="divide-y divide-slate-100 tabular-nums"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: BANK DEBT TOKENIZATION & ARBITRAGE                             -->
+    <!-- ===================================================================== -->
+    <section id="tab-debt" class="tab-panel hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <!-- Left Controls for Debt Tokenization -->
+        <aside class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900">Debt Rail Parameters</h2>
+            <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Linked to Tab 1</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">
+            Models how a shipping lender (e.g., MUFG via Progmat / Canton Network) wraps the senior ship mortgage from Tab 1 into institutional debt tokens.
+          </p>
+
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 text-xs flex justify-between items-center">
+            <span class="text-slate-600 font-medium">Base Senior Loan (Tab 1):</span>
+            <span id="debt-base-loan" class="font-extrabold text-navy-900 tabular-nums">$12.00M @ 6.50%</span>
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-debt-share" class="font-medium text-slate-600">Syndicated / Tokenized Debt Share (%)</label>
+              <span id="val-debt-share" class="font-bold text-navy-900 tabular-nums">80%</span>
+            </div>
+            <input type="range" id="inp-debt-share" min="10" max="100" step="5" value="80" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-debt-fee" class="font-medium text-slate-600">Bank Origination / Structuring Fee (%)</label>
+              <span id="val-debt-fee" class="font-bold text-navy-900 tabular-nums">1.25%</span>
+            </div>
+            <input type="range" id="inp-debt-fee" min="0.25" max="3.0" step="0.25" value="1.25" class="w-full cursor-pointer" />
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-debt-spread" class="font-medium text-slate-600">Lender Spread Retained (bps)</label>
+              <span id="val-debt-spread" class="font-bold text-navy-900 tabular-nums">125 bps</span>
+            </div>
+            <input type="range" id="inp-debt-spread" min="25" max="300" step="5" value="125" class="w-full cursor-pointer" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-debt-velocity" class="font-medium text-slate-600">Capital Recycling Velocity (deals/yr)</label>
+              <span id="val-debt-velocity" class="font-bold text-navy-900 tabular-nums">3 deals/yr</span>
+            </div>
+            <input type="range" id="inp-debt-velocity" min="1" max="6" step="1" value="3" class="w-full cursor-pointer" />
+          </div>
+        </aside>
+
+        <!-- Right Outputs & Institutional Rail Flow -->
+        <div class="lg:col-span-8 space-y-5 sm:space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Capital Freed for New Loans</span>
+                <span class="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">BALANCE SHEET</span>
+              </div>
+              <div id="debt-kpi-freed" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">$0.00M</div>
+              <div id="debt-kpi-retained" class="text-xs text-slate-500 mt-1 tabular-nums">Retained on Bank Book: $0.00M</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Annual Bank Spread &amp; Fee Revenue</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">VELOCITY</span>
+              </div>
+              <div id="debt-kpi-rev" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">$0</div>
+              <div id="debt-kpi-rev-sub" class="text-xs text-slate-500 mt-1 tabular-nums">Across 3 recycled facilities/yr</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Debt-Token Investor Net Yield</span>
+                <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold">SENIOR SECURED</span>
+              </div>
+              <div id="debt-kpi-yield" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">0.00%</div>
+              <div id="debt-kpi-yield-sub" class="text-xs text-slate-500 mt-1 tabular-nums">Loan Rate minus Retained Spread</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <span>Balance-Sheet ROE Uplift</span>
+                <span class="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">MULTIPLIER</span>
+              </div>
+              <div id="debt-kpi-roe" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">0.0x</div>
+              <div id="debt-kpi-roe-sub" class="text-xs text-slate-500 mt-1 tabular-nums">Effective Yield on Retained Capital</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-4">
+            <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900">
+              Institutional Rail Architecture (MUFG / Progmat × Canton Network)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="text-xs font-bold uppercase tracking-wider text-sky-700">Step 1 • Origination</div>
+                <div class="text-base font-bold text-navy-900 mt-1">First-Priority Ship Mortgage</div>
+                <p class="text-xs text-slate-600 mt-1.5">
+                  Lender underwrites vessel SPV, registers first-priority mortgage, and assigns insurances &amp; charter earnings.
+                </p>
+              </div>
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="text-xs font-bold uppercase tracking-wider text-sky-700">Step 2 • Tokenization</div>
+                <div class="text-base font-bold text-navy-900 mt-1">Permissioned Debt Notes</div>
+                <p class="text-xs text-slate-600 mt-1.5">
+                  Senior loan participation is wrapped on Progmat / Canton Network and placed with whitelisted institutional buyers.
+                </p>
+              </div>
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="text-xs font-bold uppercase tracking-wider text-sky-700">Step 3 • Recycling</div>
+                <div class="text-base font-bold text-navy-900 mt-1">Fee &amp; Spread Arbitrage</div>
+                <p class="text-xs text-slate-600 mt-1.5">
+                  Bank recovers principal immediately to fund new ships while retaining upfront origination fees and ongoing servicing spread.
+                </p>
+              </div>
+            </div>
+            <div class="bg-sky-50/80 border-l-4 border-sky-600 rounded-r-xl p-4 text-xs sm:text-sm text-slate-800">
+              <strong class="text-navy-900">Why this matters for a shipowner:</strong> Deeper secondary distribution lets lenders recycle capital faster, expanding credit capacity for eco-newbuildings while keeping borrower covenants intact.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: ERC-3643 & EXIT MECHANICS                                      -->
+    <!-- ===================================================================== -->
+    <section id="tab-exit" class="tab-panel hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <!-- Left Exit Controls -->
+        <aside class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900 mb-3">10-Year Exit &amp; Valuation Controls</h2>
+
+          <div class="space-y-2 mb-5">
+            <button type="button" data-exit="sale" class="opt-btn w-full text-left px-3.5 py-3 rounded-xl text-xs font-bold transition cursor-pointer bg-sky-600 text-white">
+              1. Year-10 S&amp;P Vessel Sale
+            </button>
+            <button type="button" data-exit="call" class="opt-btn w-full text-left px-3.5 py-3 rounded-xl text-xs font-bold transition cursor-pointer bg-slate-100 text-slate-700 hover:bg-slate-200">
+              2. Manager Call Option Buyout
+            </button>
+            <button type="button" data-exit="sink" class="opt-btn w-full text-left px-3.5 py-3 rounded-xl text-xs font-bold transition cursor-pointer bg-slate-100 text-slate-700 hover:bg-slate-200">
+              3. Amortizing Sinking-Fund Buyback
+            </button>
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-exit-resid" class="font-medium text-slate-600">Year-10 Residual Vessel Value (%)</label>
+              <span id="val-exit-resid" class="font-bold text-navy-900 tabular-nums">55%</span>
+            </div>
+            <input type="range" id="inp-exit-resid" min="25" max="90" step="5" value="55" class="w-full cursor-pointer" />
+            <p class="text-[11px] text-slate-400 mt-1">Percentage of original vessel purchase price at Year 10.</p>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1.5">
+              <label for="inp-exit-hurdle" class="font-medium text-slate-600">Call-Option Buyout Multiple / Hurdle</label>
+              <span id="val-exit-hurdle" class="font-bold text-navy-900 tabular-nums">1.25x</span>
+            </div>
+            <input type="range" id="inp-exit-hurdle" min="1.05" max="1.75" step="0.05" value="1.25" class="w-full cursor-pointer" />
+            <p class="text-[11px] text-slate-400 mt-1">Pre-agreed buyout premium on token principal under Call Option.</p>
+          </div>
+        </aside>
+
+        <!-- Right Exit Outputs & Governance -->
+        <div class="lg:col-span-8 space-y-5 sm:space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Terminal Vessel Proceeds</div>
+              <div id="exit-kpi-proceeds" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">$0.00M</div>
+              <div id="exit-kpi-balloon" class="text-xs text-slate-500 mt-1 tabular-nums">Less Remaining Balloon: $0.00M</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Net Terminal Equity Pool</div>
+              <div id="exit-kpi-net-eq" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">$0.00M</div>
+              <div id="exit-kpi-eq-split" class="text-xs text-slate-500 mt-1 tabular-nums">Mgr: $0.00M | Tokens: $0.00M</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Manager Full-Cycle Multiple &amp; IRR</div>
+              <div id="exit-kpi-mgr-mult" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">0.00x</div>
+              <div id="exit-kpi-mgr-irr" class="text-xs text-slate-500 mt-1 tabular-nums">Approx. Annualized IRR: 0.0%</div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Token Holder Full-Cycle Multiple &amp; IRR</div>
+              <div id="exit-kpi-tok-mult" class="text-2xl sm:text-3xl font-extrabold text-navy-900 tabular-nums">0.00x</div>
+              <div id="exit-kpi-tok-irr" class="text-xs text-slate-500 mt-1 tabular-nums">Approx. Annualized IRR: 0.0%</div>
+            </div>
+          </div>
+
+          <div id="exit-detail" class="bg-sky-50/90 border-l-4 border-sky-600 rounded-r-2xl p-4 text-xs sm:text-sm text-slate-800 shadow-sm"></div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+            <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-navy-900 mb-3">
+              ERC-3643 Compliance &amp; Vessel SPV Governance
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="font-bold text-navy-900 text-sm mb-1">Ring-Fenced SPV</div>
+                <p class="text-slate-600">Each hull sits inside a single-purpose company so mortgages, charter hire, and liabilities never cross-contaminate the wider fleet.</p>
+              </div>
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="font-bold text-navy-900 text-sm mb-1">ONCHAINID &amp; Whitelisting</div>
+                <p class="text-slate-600">ERC-3643 smart contracts verify KYC/AML status and jurisdiction eligibility automatically before any token transfer executes.</p>
+              </div>
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="font-bold text-navy-900 text-sm mb-1">Commercial Control Retained</div>
+                <p class="text-slate-600">Token holders own non-voting economic rights; chartering, technical management, and S&amp;P timing remain with the shipowner.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: NOV 2026 BENCHMARKS & 90-DAY ROADMAP                           -->
+    <!-- ===================================================================== -->
+    <section id="tab-road" class="tab-panel hidden space-y-5 sm:space-y-6">
+      <!-- Market & Ecosystem Comparison Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-sky-700">November 2026 Market &amp; RWA Reference</span>
+            <h2 class="text-base sm:text-lg font-extrabold text-navy-900">Dry-Bulk Valuation &amp; Tokenization Benchmarks</h2>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs sm:text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-y border-slate-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th class="py-2.5 px-3 text-left">Segment / Benchmark</th>
+                <th class="py-2.5 px-3 text-left">Specs / Structure</th>
+                <th class="py-2.5 px-3 text-right">Nov 2026 Value / Metric</th>
+                <th class="py-2.5 px-3 text-left">Strategic Takeaway</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3 font-bold text-navy-900">Secondhand Supramax</td>
+                <td class="py-3 px-3 text-slate-600">~56k–58k DWT (2011–2013 built)</td>
+                <td class="py-3 px-3 text-right font-bold tabular-nums">$16.5M – $20.0M</td>
+                <td class="py-3 px-3 text-slate-600 text-xs">Lower entry ticket; fastest cash-on-cash payback in strong freight cycles.</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3 font-bold text-navy-900">Mid-Age Ultramax</td>
+                <td class="py-3 px-3 text-slate-600">~63.5k DWT (2016–2021 built)</td>
+                <td class="py-3 px-3 text-right font-bold tabular-nums">$27.5M – $38.5M</td>
+                <td class="py-3 px-3 text-slate-600 text-xs">Liquid S&amp;P benchmark; preferred collateral for senior shipping banks.</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3 font-bold text-navy-900">2026 Eco-Ultramax NB</td>
+                <td class="py-3 px-3 text-slate-600">~64k DWT Tier-III / EEDI Phase 3</td>
+                <td class="py-3 px-3 text-right font-bold tabular-nums">$34.5M – $36.5M</td>
+                <td class="py-3 px-3 text-slate-600 text-xs">Fuel-efficiency premium commands higher TC rates &amp; lower emissions cost.</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3 font-bold text-navy-900">Prompt 2026 Ultramax</td>
+                <td class="py-3 px-3 text-slate-600">~64k–66.6k DWT delivered / resale</td>
+                <td class="py-3 px-3 text-right font-bold tabular-nums">$45.0M – $47.0M</td>
+                <td class="py-3 px-3 text-slate-600 text-xs">Prime candidate for peak-market equity recycling via SPV syndication.</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3 font-bold text-navy-900">MarineStake / ShipFinex</td>
+                <td class="py-3 px-3 text-slate-600">63.5k DWT Ultramax ERC-3643 SPVs</td>
+                <td class="py-3 px-3 text-right font-bold tabular-nums">~8% – 10% Target Yield</td>
+                <td class="py-3 px-3 text-slate-600 text-xs">Owner-led institutional syndicate preserves higher margin &amp; control.</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3 font-bold text-navy-900">BIMCO Bulk eBL &amp; RLUSD</td>
+                <td class="py-3 px-3 text-slate-600">MLETR trade docs + instant settlement</td>
+                <td class="py-3 px-3 text-right font-bold tabular-nums">51.1% Global eBL Adoption</td>
+                <td class="py-3 px-3 text-slate-600 text-xs">Low-risk Phase 1 operational pilot on a single charter voyage.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Interactive 90-Day Execution Checklist -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-sky-700">Actionable Deliverables</span>
+            <h2 class="text-base sm:text-lg font-extrabold text-navy-900">90-Day Execution Roadmap</h2>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="road-progress-text" class="text-xs font-bold text-navy-900 tabular-nums">2 / 6 Complete (33%)</span>
+            <div class="w-28 sm:w-32 h-2.5 bg-slate-200 rounded-full overflow-hidden">
+              <div id="road-progress-bar" class="h-full bg-emerald-500 transition-all duration-200" style="width: 33%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase Filter Pills -->
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button type="button" data-phase="all" class="phase-btn px-3 py-2 rounded-lg text-xs font-bold cursor-pointer bg-navy-900 text-white">All Phases</button>
+          <button type="button" data-phase="p1" class="phase-btn px-3 py-2 rounded-lg text-xs font-bold cursor-pointer bg-slate-100 text-slate-700">Days 1–30: Modeling</button>
+          <button type="button" data-phase="p2" class="phase-btn px-3 py-2 rounded-lg text-xs font-bold cursor-pointer bg-slate-100 text-slate-700">Days 31–60: Legal</button>
+          <button type="button" data-phase="p3" class="phase-btn px-3 py-2 rounded-lg text-xs font-bold cursor-pointer bg-slate-100 text-slate-700">Days 61–90: Pilot</button>
+        </div>
+
+        <div id="roadmap-list" class="space-y-2.5"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. DYNAMIC PROGRESSIVE WEB APP (PWA) MANIFEST, ICON & SERVICE WORKER
+    // =========================================================================
+    (function initPWA() {
+      try {
+        const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0b1f3a"/>
+              <stop offset="100%" stop-color="#133b6b"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+          <circle cx="256" cy="256" r="184" fill="none" stroke="#eab308" stroke-width="10" stroke-opacity="0.35"/>
+          <path d="M256 96 L284 220 L408 248 L284 276 L256 400 L228 276 L104 248 L228 220 Z" fill="#38bdf8" fill-opacity="0.22"/>
+          <path d="M128 310 L384 310 L354 366 C348 377 336 384 323 384 L189 384 C176 384 164 377 158 366 Z" fill="#ffffff"/>
+          <path d="M172 252 L340 252 L356 296 L156 296 Z" fill="#eab308"/>
+          <rect x="214" y="198" width="84" height="42" rx="8" fill="#e0f2fe"/>
+          <rect x="246" y="152" width="20" height="46" rx="4" fill="#38bdf8"/>
+        </svg>`;
+
+        const iconUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(iconSvg);
+        const appleIcon = document.getElementById("apple-touch-icon");
+        if (appleIcon) appleIcon.href = iconUrl;
+
+        const manifestObj = {
+          name: "Maritime Capital & Fleet Scaling Architecture",
+          short_name: "Maritime RWA",
+          description: "Dry-bulk fleet scaling, bank debt tokenization, and ERC-3643 exit simulator.",
+          start_url: window.location.href,
+          display: "standalone",
+          background_color: "#f1f5f9",
+          theme_color: "#0b1f3a",
+          orientation: "portrait-primary",
+          icons: [
+            { src: iconUrl, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
+            { src: iconUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+          ]
+        };
+
+        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: "application/manifest+json" });
+        const manifestLink = document.getElementById("pwa-manifest");
+        if (manifestLink) manifestLink.href = URL.createObjectURL(manifestBlob);
+
+        if ("serviceWorker" in navigator && (window.location.protocol === "https:" || window.location.protocol === "http:")) {
+          const swCode = `
+            const CACHE_NAME = 'maritime-rwa-v1';
+            self.addEventListener('install', (e) => {
+              self.skipWaiting();
+            });
+            self.addEventListener('activate', (e) => {
+              e.waitUntil(self.clients.claim());
+            });
+            self.addEventListener('fetch', (e) => {
+              if (e.request.method !== 'GET') return;
+              e.respondWith(
+                caches.open(CACHE_NAME).then((cache) =>
+                  fetch(e.request)
+                    .then((res) => {
+                      if (res && res.status === 200) cache.put(e.request, res.clone());
+                      return res;
+                    })
+                    .catch(() => cache.match(e.request))
+                )
+              );
+            });
+          `;
+          const swBlob = new Blob([swCode], { type: "application/javascript" });
+          const swUrl = URL.createObjectURL(swBlob);
+          navigator.serviceWorker.register(swUrl).catch(() => {
+            // Sandbox / iframe environments may block Blob service workers; manifest still works
+          });
+        }
+      } catch (err) {
+        // Fail silently in restricted preview sandboxes
+      }
+    })();
+
+    // =========================================================================
+    // 2. UNIFIED FINANCIAL ENGINE & INTERACTIVE UI STATE
+    // =========================================================================
+    const PRESETS = {
+      supramax: {
+        label: "$20M Supramax",
+        valuation: 20, ltv: 60, coInvest: 20, cashPool: 8,
+        rate: 6.5, term: 10, balloon: 62.7,
+        charter: 16500, days: 350, opex: 6200, capex: 1100, mgmtFee: 250
+      },
+      ultramax36: {
+        label: "$36M Ultramax NB",
+        valuation: 36, ltv: 65, coInvest: 20, cashPool: 10,
+        rate: 6.0, term: 10, balloon: 50.0,
+        charter: 19500, days: 355, opex: 6600, capex: 800, mgmtFee: 300
+      },
+      ultramax46: {
+        label: "$46M Prompt Eco",
+        valuation: 46, ltv: 65, coInvest: 25, cashPool: 15,
+        rate: 5.75, term: 12, balloon: 45.0,
+        charter: 22500, days: 355, opex: 6800, capex: 750, mgmtFee: 350
+      }
+    };
+
+    const EXIT_COPY = {
+      sale: "<strong class='text-navy-900'>Year-10 S&amp;P Vessel Sale:</strong> At Year 10, the SPV sells the vessel on the secondhand market at the modeled residual value, repays the remaining bank balloon balance, and distributes net equity proceeds according to ownership shares.",
+      call: "<strong class='text-navy-900'>Manager Call Option Buyout:</strong> Gives the shipowner/manager a pre-agreed right to buy out outside ERC-3643 token holders at the target buyout multiple on token principal, capturing 100% of residual vessel value above the buyout price.",
+      sink: "<strong class='text-navy-900'>Amortizing Sinking-Fund Buyback:</strong> Allocates 25% of annual net distributable cash flow to systematically retire token principal over the 10-year hold, lowering terminal buyout exposure while preserving upside."
+    };
+
+    const ROADMAP_ITEMS = [
+      { id: 1, phase: "p1", tag: "Days 1–30", title: "Calibrate Supramax & 2026 Ultramax Cash-Flow Waterfall Model", desc: "Stress-test charter rates, OPEX, dry-dock reserves, and loan balloon schedules across base and downside cycles.", done: true },
+      { id: 2, phase: "p1", tag: "Days 1–30", title: "Benchmark Live ERC-3643 Maritime SPVs (MarineStake & ShipFinex)", desc: "Compare retail marketplace fee drag vs. an owner-led institutional & charterer syndicate structure.", done: true },
+      { id: 3, phase: "p2", tag: "Days 31–60", title: "Verify ERC-3643 & SPV Setup Costs with Tokenization Providers", desc: "Confirm minimum viable issuance size, KYC/ONCHAINID onboarding fees, and Marshall Islands / Liberia SPV compatibility.", done: false },
+      { id: 4, phase: "p2", tag: "Days 31–60", title: "Confirm Senior Lender Consent & Debt-Tokenization Terms", desc: "Map mortgage-bank change-of-control covenants and secondary debt participation mechanics.", done: false },
+      { id: 5, phase: "p3", tag: "Days 61–90", title: "Launch Phase 1 BIMCO Bulk eBL & Instant Settlement Voyage Pilot", desc: "Test electronic bill of lading and digital invoice settlement on a single dry-bulk voyage with a tier-1 charterer.", done: false },
+      { id: 6, phase: "p3", tag: "Days 61–90", title: "Structure Institutional Co-Investment Term Sheet for Fleet Expansion", desc: "Finalize governance split, management fee waterfall, and Year-10 exit/call-option terms for partner onboarding.", done: false }
+    ];
+
+    let activeExitMode = "sale";
+    let activePhaseFilter = "all";
+
+    const els = {
+      valuation: document.getElementById("inp-valuation"),
+      ltv: document.getElementById("inp-ltv"),
+      coInvest: document.getElementById("inp-co-invest"),
+      cashPool: document.getElementById("inp-cash-pool"),
+      rate: document.getElementById("inp-rate"),
+      term: document.getElementById("inp-term"),
+      balloon: document.getElementById("inp-balloon"),
+      charter: document.getElementById("inp-charter"),
+      days: document.getElementById("inp-days"),
+      opex: document.getElementById("inp-opex"),
+      capex: document.getElementById("inp-capex"),
+      mgmtFee: document.getElementById("inp-mgmt-fee"),
+      debtShare: document.getElementById("inp-debt-share"),
+      debtFee: document.getElementById("inp-debt-fee"),
+      debtSpread: document.getElementById("inp-debt-spread"),
+      debtVelocity: document.getElementById("inp-debt-velocity"),
+      exitResid: document.getElementById("inp-exit-resid"),
+      exitHurdle: document.getElementById("inp-exit-hurdle")
+    };
+
+    const fmtUSD = (n) => {
+      const sign = n < 0 ? "-" : "";
+      return sign + "$" + Math.round(Math.abs(n)).toLocaleString("en-US");
+    };
+
+    const fmtM = (n) => {
+      const sign = n < 0 ? "-" : "";
+      return sign + "$" + (Math.abs(n) / 1e6).toFixed(2) + "M";
+    };
+
+    function getInputs() {
+      return {
+        valuation: parseFloat(els.valuation.value) * 1e6,
+        ltv: parseFloat(els.ltv.value) / 100,
+        coInvest: parseFloat(els.coInvest.value) / 100,
+        cashPool: parseFloat(els.cashPool.value) * 1e6,
+        rate: parseFloat(els.rate.value) / 100,
+        term: parseInt(els.term.value, 10),
+        balloonPct: parseFloat(els.balloon.value) / 100,
+        charter: parseFloat(els.charter.value),
+        days: parseInt(els.days.value, 10),
+        opex: parseFloat(els.opex.value),
+        capex: parseFloat(els.capex.value) * 1000,
+        mgmtFee: parseFloat(els.mgmtFee.value) * 1000,
+        debtShare: parseFloat(els.debtShare.value) / 100,
+        debtFee: parseFloat(els.debtFee.value) / 100,
+        debtSpreadBps: parseFloat(els.debtSpread.value),
+        debtVelocity: parseInt(els.debtVelocity.value, 10),
+        exitResid: parseFloat(els.exitResid.value) / 100,
+        exitHurdle: parseFloat(els.exitHurdle.value)
+      };
+    }
+
+    function updateLabels(inp) {
+      document.getElementById("val-valuation").textContent = "$" + (inp.valuation / 1e6).toFixed(1) + "M";
+      document.getElementById("val-ltv").textContent = (inp.ltv * 100).toFixed(1) + "%";
+      document.getElementById("val-co-invest").textContent = (inp.coInvest * 100).toFixed(1) + "%";
+      document.getElementById("val-cash-pool").textContent = "$" + (inp.cashPool / 1e6).toFixed(1) + "M";
+      document.getElementById("val-rate").textContent = (inp.rate * 100).toFixed(2) + "%";
+      document.getElementById("val-term").textContent = inp.term + " yrs";
+      document.getElementById("val-balloon").textContent = (inp.balloonPct * 100).toFixed(1) + "%";
+      document.getElementById("val-charter").textContent = "$" + Math.round(inp.charter).toLocaleString("en-US");
+      document.getElementById("val-days").textContent = inp.days + " days";
+      document.getElementById("val-opex").textContent = "$" + Math.round(inp.opex).toLocaleString("en-US");
+      document.getElementById("val-capex").textContent = "$" + Math.round(inp.capex / 1000).toLocaleString("en-US") + "k";
+      document.getElementById("val-mgmt-fee").textContent = "$" + Math.round(inp.mgmtFee / 1000).toLocaleString("en-US") + "k";
+
+      document.getElementById("val-debt-share").textContent = Math.round(inp.debtShare * 100) + "%";
+      document.getElementById("val-debt-fee").textContent = (inp.debtFee * 100).toFixed(2) + "%";
+      document.getElementById("val-debt-spread").textContent = inp.debtSpreadBps + " bps";
+      document.getElementById("val-debt-velocity").textContent = inp.debtVelocity + (inp.debtVelocity === 1 ? " deal/yr" : " deals/yr");
+
+      document.getElementById("val-exit-resid").textContent = Math.round(inp.exitResid * 100) + "%";
+      document.getElementById("val-exit-hurdle").textContent = inp.exitHurdle.toFixed(2) + "x";
+    }
+
+    function calculateModel(inp) {
+      const grossRevenue = inp.charter * inp.days;
+      const annualOpex = inp.opex * 365;
+      const annualCapexReserve = inp.capex / 5;
+
+      const loanPrincipal = inp.valuation * inp.ltv;
+      const balloonAmount = loanPrincipal * inp.balloonPct;
+      const amortizableLoan = Math.max(0, loanPrincipal - balloonAmount);
+      const annualPrincipalRepay = inp.term > 0 ? amortizableLoan / inp.term : 0;
+      const year1Interest = loanPrincipal * inp.rate;
+      const totalDebtService = annualPrincipalRepay + year1Interest;
+
+      const netProfitPool = grossRevenue - annualOpex - annualCapexReserve - inp.mgmtFee - totalDebtService;
+
+      const totalEquity = Math.max(0, inp.valuation - loanPrincipal);
+      const mgrEquity = totalEquity * inp.coInvest;
+      const tokenEquity = Math.max(0, totalEquity - mgrEquity);
+
+      const mgrEquityYield = netProfitPool * inp.coInvest;
+      const mgrTotalInflow = inp.mgmtFee + mgrEquityYield;
+      const tokenPayout = netProfitPool * (1 - inp.coInvest);
+
+      const mgrCashOnCash = mgrEquity > 0 ? (mgrTotalInflow / mgrEquity) * 100 : 0;
+      const tokenRoi = tokenEquity > 0 ? (tokenPayout / tokenEquity) * 100 : 0;
+      const paybackYears = mgrTotalInflow > 0 && mgrEquity > 0 ? mgrEquity / mgrTotalInflow : null;
+
+      const yr0Ships = mgrEquity > 0 ? Math.floor(inp.cashPool / mgrEquity) : 0;
+      const yr0CashRemaining = inp.cashPool - (yr0Ships * mgrEquity);
+
+      // 5-year compounding schedule
+      const schedule = [];
+      let pool = inp.cashPool;
+      let activeShips = yr0Ships;
+      for (let yr = 1; yr <= 5; yr++) {
+        if (mgrEquity > 0) {
+          while (pool >= mgrEquity) {
+            pool -= mgrEquity;
+            activeShips += 1;
+          }
+        }
+        const yrInflow = activeShips * mgrTotalInflow;
+        pool += yrInflow;
+        schedule.push({ year: "Year " + yr, ships: activeShips, inflow: yrInflow, pool });
+      }
+
+      // Tab 2: Bank Debt Tokenization calculations
+      const freedCapitalPerDeal = loanPrincipal * inp.debtShare;
+      const totalCapitalFreed = freedCapitalPerDeal * inp.debtVelocity;
+      const retainedCapitalPerDeal = Math.max(0, loanPrincipal - freedCapitalPerDeal);
+      const annualOriginationFees = loanPrincipal * inp.debtFee * inp.debtVelocity;
+      const annualSpreadIncome = freedCapitalPerDeal * (inp.debtSpreadBps / 10000) * inp.debtVelocity;
+      const retainedInterestIncome = retainedCapitalPerDeal * inp.rate;
+      const totalBankRevenue = annualOriginationFees + annualSpreadIncome + retainedInterestIncome;
+      const debtTokenNetYield = Math.max(0, (inp.rate * 100) - (inp.debtSpreadBps / 100));
+      const baseBankYield = inp.rate * 100;
+      const effectiveRetainedYield = retainedCapitalPerDeal > 0 ? (totalBankRevenue / retainedCapitalPerDeal) * 100 : 0;
+      const roeUplift = baseBankYield > 0 ? effectiveRetainedYield / baseBankYield : 0;
+
+      // Tab 3: 10-Year Exit calculations
+      const terminalProceeds = inp.valuation * inp.exitResid;
+      const remainingBalloonAtYr10 = inp.term <= 10 ? balloonAmount : Math.max(0, loanPrincipal - annualPrincipalRepay * 10);
+      const netTerminalEquityPool = Math.max(0, terminalProceeds - remainingBalloonAtYr10);
+
+      let mgrTerminalPayout = 0;
+      let tokTerminalPayout = 0;
+      let mgrCumulativeCash = mgrTotalInflow * 10;
+      let tokCumulativeCash = tokenPayout * 10;
+
+      if (activeExitMode === "sale") {
+        mgrTerminalPayout = netTerminalEquityPool * inp.coInvest;
+        tokTerminalPayout = netTerminalEquityPool * (1 - inp.coInvest);
+      } else if (activeExitMode === "call") {
+        // Call option applies buyout multiple strictly to outside token holders' equity slice (tokenEquity)
+        const callPrice = tokenEquity * inp.exitHurdle;
+        tokTerminalPayout = Math.min(netTerminalEquityPool, callPrice);
+        mgrTerminalPayout = Math.max(0, netTerminalEquityPool - tokTerminalPayout);
+      } else {
+        const annualSinking = Math.max(0, netProfitPool * 0.25);
+        const retiredPrincipal = Math.min(tokenEquity, annualSinking * 10);
+        const remainingTokShare = totalEquity > 0 ? Math.max(0, tokenEquity - retiredPrincipal) / totalEquity : 0;
+        tokTerminalPayout = retiredPrincipal + (netTerminalEquityPool * remainingTokShare);
+        mgrTerminalPayout = Math.max(0, netTerminalEquityPool - (netTerminalEquityPool * remainingTokShare));
+        tokCumulativeCash = Math.max(0, (netProfitPool - annualSinking) * (1 - inp.coInvest) * 10);
+        mgrCumulativeCash = (inp.mgmtFee + Math.max(0, netProfitPool - annualSinking) * inp.coInvest) * 10;
+      }
+
+      const mgrTotalReturn = mgrCumulativeCash + mgrTerminalPayout;
+      const tokTotalReturn = tokCumulativeCash + tokTerminalPayout;
+      const mgrMultiple = mgrEquity > 0 ? mgrTotalReturn / mgrEquity : 0;
+      const tokMultiple = tokenEquity > 0 ? tokTotalReturn / tokenEquity : 0;
+      const mgrIrr = mgrMultiple > 0 ? (Math.pow(mgrMultiple, 0.1) - 1) * 100 : 0;
+      const tokIrr = tokMultiple > 0 ? (Math.pow(tokMultiple, 0.1) - 1) * 100 : 0;
+
+      return {
+        grossRevenue, annualOpex, annualCapexReserve,
+        loanPrincipal, balloonAmount, annualPrincipalRepay, year1Interest, totalDebtService,
+        netProfitPool, totalEquity, mgrEquity, tokenEquity,
+        mgrEquityYield, mgrTotalInflow, tokenPayout,
+        mgrCashOnCash, tokenRoi, paybackYears,
+        yr0Ships, yr0CashRemaining, schedule,
+        freedCapitalPerDeal, totalCapitalFreed, retainedCapitalPerDeal,
+        totalBankRevenue, debtTokenNetYield, roeUplift,
+        terminalProceeds, remainingBalloonAtYr10, netTerminalEquityPool,
+        mgrTerminalPayout, tokTerminalPayout, mgrMultiple, tokMultiple, mgrIrr, tokIrr
+      };
+    }
+
+    function renderRoadmap() {
+      const completed = ROADMAP_ITEMS.filter(i => i.done).length;
+      const pct = Math.round((completed / ROADMAP_ITEMS.length) * 100);
+      document.getElementById("road-progress-text").textContent = `${completed} / ${ROADMAP_ITEMS.length} Complete (${pct}%)`;
+      document.getElementById("road-progress-bar").style.width = pct + "%";
+
+      const visible = activePhaseFilter === "all"
+        ? ROADMAP_ITEMS
+        : ROADMAP_ITEMS.filter(i => i.phase === activePhaseFilter);
+
+      document.getElementById("roadmap-list").innerHTML = visible.map(item => `
+        <label class="flex items-start gap-3 p-3.5 rounded-xl border ${item.done ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50 border-slate-200'} cursor-pointer transition hover:border-sky-300">
+          <input type="checkbox" data-road-id="${item.id}" ${item.done ? "checked" : ""} class="mt-0.5 h-5 w-5 accent-emerald-600 rounded cursor-pointer shrink-0" />
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">${item.tag}</span>
+              <span class="text-xs sm:text-sm font-bold ${item.done ? 'line-through text-slate-400' : 'text-navy-900'}">${item.title}</span>
+            </div>
+            <p class="text-xs text-slate-600 mt-1">${item.desc}</p>
+          </div>
+        </label>
+      `).join("");
+
+      document.querySelectorAll("input[data-road-id]").forEach(cb => {
+        cb.addEventListener("change", () => {
+          const id = parseInt(cb.dataset.roadId, 10);
+          const target = ROADMAP_ITEMS.find(x => x.id === id);
+          if (target) target.done = cb.checked;
+          renderRoadmap();
+        });
+      });
+    }
+
+    function render() {
+      const inp = getInputs();
+      updateLabels(inp);
+      const m = calculateModel(inp);
+
+      // Mobile Sticky Live KPI Bar
+      document.getElementById("mob-kpi-profit").textContent = fmtUSD(m.netProfitPool);
+      document.getElementById("mob-kpi-mgr").textContent = m.mgrCashOnCash.toFixed(2) + "%";
+      document.getElementById("mob-kpi-tok").textContent = m.tokenRoi.toFixed(2) + "%";
+
+      // Tab 1 KPIs
+      document.getElementById("kpi-net-profit").textContent = fmtUSD(m.netProfitPool);
+      document.getElementById("kpi-gross-rev").textContent = "Gross Revenue: " + fmtUSD(m.grossRevenue);
+      document.getElementById("kpi-mgr-inflow").textContent = fmtUSD(m.mgrTotalInflow);
+      document.getElementById("kpi-mgr-split").textContent = fmtUSD(inp.mgmtFee) + " Fee + " + fmtUSD(m.mgrEquityYield) + " Yield";
+      document.getElementById("kpi-mgr-yield").textContent = m.mgrCashOnCash.toFixed(2) + "%";
+      document.getElementById("kpi-mgr-payback").textContent = m.paybackYears !== null
+        ? "Payback: " + m.paybackYears.toFixed(2) + " yrs (" + Math.round(m.paybackYears * 12) + " mos)"
+        : "Payback: N/A";
+      document.getElementById("kpi-tok-roi").textContent = m.tokenRoi.toFixed(2) + "%";
+      document.getElementById("kpi-tok-payout").textContent = "Annual Payout: " + fmtUSD(m.tokenPayout);
+
+      // Tab 1 Capital Sizing
+      document.getElementById("cap-loan").textContent = fmtM(m.loanPrincipal);
+      document.getElementById("cap-balloon-amt").textContent = "Balloon: " + fmtM(m.balloonAmount);
+      document.getElementById("cap-equity").textContent = fmtM(m.totalEquity);
+      document.getElementById("cap-equity-split").textContent = "Mgr: " + fmtM(m.mgrEquity) + " | Tokens: " + fmtM(m.tokenEquity);
+      document.getElementById("cap-yr0-ships").textContent = m.yr0Ships + (m.yr0Ships === 1 ? " ship" : " ships");
+      document.getElementById("cap-cash-left").textContent = "Pool Left: " + fmtM(m.yr0CashRemaining);
+
+      // Tab 1 Waterfall Table
+      const wfRows = [
+        ["Gross Charter Revenue", fmtUSD(m.grossRevenue), inp.days + " days @ $" + Math.round(inp.charter).toLocaleString("en-US") + "/day"],
+        ["Less: Vessel OPEX", fmtUSD(-m.annualOpex), "$" + Math.round(inp.opex).toLocaleString("en-US") + "/day × 365 days"],
+        ["Less: Drydock CapEx Reserve", fmtUSD(-m.annualCapexReserve), fmtUSD(inp.capex) + " amortized over 5 yrs"],
+        ["Less: Management Fee", fmtUSD(-m.mgmtFee), "Paid to manager off the top"],
+        ["Less: Loan Principal Amortization", fmtUSD(-m.annualPrincipalRepay), "Straight-line over " + inp.term + " yrs (excl. balloon)"],
+        ["Less: Loan Interest (Yr 1)", fmtUSD(-m.year1Interest), (inp.rate * 100).toFixed(2) + "% on " + fmtM(m.loanPrincipal) + " loan"],
+        ["Net Distributable Profit Pool", fmtUSD(m.netProfitPool), "Split " + (inp.coInvest * 100).toFixed(0) + "% Manager / " + ((1 - inp.coInvest) * 100).toFixed(0) + "% Tokens"]
+      ];
+      document.getElementById("waterfall-body").innerHTML = wfRows.map((r, idx) => {
+        const isLast = idx === wfRows.length - 1;
+        const rowCls = isLast ? "bg-sky-50/90 font-bold text-navy-900" : "hover:bg-slate-50/70";
+        return `<tr class="${rowCls}"><td class="py-2.5 px-3">${r[0]}</td><td class="py-2.5 px-3 text-right">${r[1]}</td><td class="py-2.5 px-3 text-right text-slate-500 text-[11px] sm:text-xs">${r[2]}</td></tr>`;
+      }).join("");
+
+      // Tab 1 Compounding Table
+      document.getElementById("compounding-body").innerHTML = m.schedule.map(row => `
+        <tr class="hover:bg-slate-50/70">
+          <td class="py-2.5 px-3 font-semibold text-slate-900">${row.year}</td>
+          <td class="py-2.5 px-3 text-right">${row.ships}</td>
+          <td class="py-2.5 px-3 text-right">${fmtUSD(row.inflow)}</td>
+          <td class="py-2.5 px-3 text-right font-semibold text-navy-900">${fmtM(row.pool)}</td>
+        </tr>
+      `).join("");
+
+      // Tab 2 Debt Tokenization Outputs
+      document.getElementById("debt-base-loan").textContent = `${fmtM(m.loanPrincipal)} @ ${(inp.rate * 100).toFixed(2)}%`;
+      document.getElementById("debt-kpi-freed").textContent = fmtM(m.totalCapitalFreed);
+      document.getElementById("debt-kpi-retained").textContent = `Retained per Ship on Bank Book: ${fmtM(m.retainedCapitalPerDeal)}`;
+      document.getElementById("debt-kpi-rev").textContent = fmtUSD(m.totalBankRevenue);
+      document.getElementById("debt-kpi-rev-sub").textContent = `Across ${inp.debtVelocity} recycled ${inp.debtVelocity === 1 ? "facility" : "facilities"}/yr`;
+      document.getElementById("debt-kpi-yield").textContent = m.debtTokenNetYield.toFixed(2) + "%";
+      document.getElementById("debt-kpi-roe").textContent = m.retainedCapitalPerDeal > 0 ? m.roeUplift.toFixed(1) + "x" : "Fee-Only";
+
+      // Tab 3 Exit Outputs
+      document.getElementById("exit-kpi-proceeds").textContent = fmtM(m.terminalProceeds);
+      document.getElementById("exit-kpi-balloon").textContent = `Less Remaining Balloon: ${fmtM(m.remainingBalloonAtYr10)}`;
+      document.getElementById("exit-kpi-net-eq").textContent = fmtM(m.netTerminalEquityPool);
+      document.getElementById("exit-kpi-eq-split").textContent = `Mgr: ${fmtM(m.mgrTerminalPayout)} | Tokens: ${fmtM(m.tokTerminalPayout)}`;
+      document.getElementById("exit-kpi-mgr-mult").textContent = m.mgrMultiple.toFixed(2) + "x";
+      document.getElementById("exit-kpi-mgr-irr").textContent = `Approx. Annualized IRR: ${m.mgrIrr.toFixed(1)}%`;
+      document.getElementById("exit-kpi-tok-mult").textContent = m.tokMultiple.toFixed(2) + "x";
+      document.getElementById("exit-kpi-tok-irr").textContent = `Approx. Annualized IRR: ${m.tokIrr.toFixed(1)}%`;
+      document.getElementById("exit-detail").innerHTML = EXIT_COPY[activeExitMode];
+    }
+
+    // Bind all sliders
+    Object.values(els).forEach(input => {
+      input.addEventListener("input", () => {
+        if (["inp-valuation", "inp-ltv", "inp-co-invest", "inp-cash-pool", "inp-rate", "inp-term", "inp-balloon", "inp-charter", "inp-days", "inp-opex", "inp-capex", "inp-mgmt-fee"].includes(input.id)) {
+          document.querySelectorAll(".preset-btn").forEach(b => {
+            b.className = "preset-btn px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300";
+          });
+          document.getElementById("active-preset-label").textContent = "Custom Deal";
+        }
+        render();
+      });
+    });
+
+    // Bind preset buttons
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.preset;
+        const p = PRESETS[key];
+        if (!p) return;
+
+        els.valuation.value = p.valuation;
+        els.ltv.value = p.ltv;
+        els.coInvest.value = p.coInvest;
+        els.cashPool.value = p.cashPool;
+        els.rate.value = p.rate;
+        els.term.value = p.term;
+        els.balloon.value = p.balloon;
+        els.charter.value = p.charter;
+        els.days.value = p.days;
+        els.opex.value = p.opex;
+        els.capex.value = p.capex;
+        els.mgmtFee.value = p.mgmtFee;
+
+        document.querySelectorAll(".preset-btn").forEach(b => {
+          const active = b.dataset.preset === key;
+          b.className = active
+            ? "preset-btn px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer bg-sky-50 border-sky-500 text-navy-900"
+            : "preset-btn px-2 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300";
+        });
+        document.getElementById("active-preset-label").textContent = p.label;
+        render();
+      });
+    });
+
+    // Bind 4-tab navigation
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach(b => {
+          const active = b.dataset.tab === target;
+          b.className = active
+            ? "tab-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer bg-navy-900 text-white shadow-sm"
+            : "tab-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer bg-white text-slate-600 hover:text-slate-900 border border-slate-200";
+        });
+        document.querySelectorAll(".tab-panel").forEach(p => {
+          if (p.id === "tab-" + target) {
+            p.classList.remove("hidden");
+            p.classList.add("block");
+          } else {
+            p.classList.add("hidden");
+            p.classList.remove("block");
+          }
+        });
+      });
+    });
+
+    // Bind Tab 3 exit mode toggles
+    document.querySelectorAll(".opt-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activeExitMode = btn.dataset.exit;
+        document.querySelectorAll(".opt-btn").forEach(b => {
+          const active = b.dataset.exit === activeExitMode;
+          b.className = active
+            ? "opt-btn w-full text-left px-3.5 py-3 rounded-xl text-xs font-bold transition cursor-pointer bg-sky-600 text-white"
+            : "opt-btn w-full text-left px-3.5 py-3 rounded-xl text-xs font-bold transition cursor-pointer bg-slate-100 text-slate-700 hover:bg-slate-200";
+        });
+        render();
+      });
+    });
+
+    // Bind Tab 4 phase filters
+    document.querySelectorAll(".phase-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activePhaseFilter = btn.dataset.phase;
+        document.querySelectorAll(".phase-btn").forEach(b => {
+          const active = b.dataset.phase === activePhaseFilter;
+          b.className = active
+            ? "phase-btn px-3 py-2 rounded-lg text-xs font-bold cursor-pointer bg-navy-900 text-white"
+            : "phase-btn px-3 py-2 rounded-lg text-xs font-bold cursor-pointer bg-slate-100 text-slate-700";
+        });
+        renderRoadmap();
+      });
+    });
+
+    renderRoadmap();
+    render();
+  </script>
+</body>
+</html>
